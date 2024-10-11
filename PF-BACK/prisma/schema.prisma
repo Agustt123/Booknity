@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  output = "./../node_modules/.prisma/client"
+  generate = true
+
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  user_id           Int        @id @default(autoincrement())
+  name              String
+  email             String     @unique
+  password          String
+  description       String?
+  isAdmin           Boolean    @default(false)
+  registration_date DateTime   @default(now())
+  reviews           Review[]
+  bookLists         BookList[]
+  forumComments     ForumComment[]
+  favorites         Favorite[]
+  followers         Follower[] @relation("Following")
+  following         Follower[] @relation("Followed")
+  notifications     Notification[]
+  photoUrl          String?
+  isConfirmed       Boolean    @default(false)
+  reports           Report[]
+  friends           User[]     @relation("UserFriends") // Amigos
+  friendOf          User[]     @relation("UserFriends") // Amigos inverso
+  donations         Donation[] // Relación con Donaciones
+  isDeleted         Boolean    @default(false)
+  isBanned          Boolean    @default(false)
+
+  // Relación para los seguidores que también son amigos
+  followersAsFriends User[] @relation("FriendsAsFollowers") // Nuevo campo
+  friendsAsFollowers User[] @relation("FriendsAsFollowers") // Campo inverso
+}
+
+
+
+
+model Book {
+  book_id            Int       @id @default(autoincrement())
+  title              String    @unique
+  author             String
+  categories         Category[] @relation("BookCategories")
+  publication_year   Int
+  description        String
+  reviews            Review[]
+  bookListBooks      BookListBook[]
+  favorites          Favorite[]
+  photoUrl           String
+  isDeleted          Boolean    @default(false)
+   createdAt          DateTime   @default(now()) // Agregar este campo
+}
+
+model Category {
+  id                 Int       @id @default(autoincrement())
+  name               String    @unique
+  books              Book[]    @relation("BookCategories")
+  isDeleted          Boolean    @default(false)
+}
+
+model Review {
+  review_id          Int       @id @default(autoincrement())
+  user               User      @relation(fields: [user_id], references: [user_id])
+  user_id            Int
+  book               Book      @relation(fields: [book_id], references: [book_id])
+  book_id            Int
+  content            String
+  rating             Int
+  review_date        DateTime
+  reports            Report[]
+  isDeleted          Boolean    @default(false)
+}
+
+model BookList {
+  list_id            Int       @id @default(autoincrement())
+  user               User      @relation(fields: [user_id], references: [user_id])
+  user_id            Int
+  list_name          String
+  description        String
+  creation_date      DateTime
+  books              BookListBook[]
+  isDeleted          Boolean    @default(false)
+}
+
+model BookListBook {
+  list_id            Int
+  book_id            Int
+  bookList           BookList  @relation(fields: [list_id], references: [list_id])
+  book               Book      @relation(fields: [book_id], references: [book_id])
+  isDeleted          Boolean    @default(false)
+  @@id([list_id, book_id])
+}
+
+model Forum {
+  forum_id           Int       @id @default(autoincrement())
+  topic              String
+  description        String
+  creation_date      DateTime
+  comments           ForumComment[]
+  isDeleted          Boolean    @default(false)
+}
+
+model ForumComment {
+  comment_id         Int       @id @default(autoincrement())
+  forum              Forum     @relation(fields: [forum_id], references: [forum_id])
+  forum_id           Int
+  user               User      @relation(fields: [user_id], references: [user_id])
+  user_id            Int
+  content            String
+  comment_date       DateTime
+  isDeleted          Boolean    @default(false)
+}
+
+model Favorite {
+  user_id            Int
+  book_id            Int
+  user               User      @relation(fields: [user_id], references: [user_id])
+  book               Book      @relation(fields: [book_id], references: [book_id])
+  @@id([user_id, book_id])
+}
+
+model Follower {
+  follower_user_id   Int
+  followed_user_id   Int
+  follower           User      @relation("Following", fields: [follower_user_id], references: [user_id])
+  followed           User      @relation("Followed", fields: [followed_user_id], references: [user_id])
+  @@id([follower_user_id, followed_user_id])
+}
+
+model Notification {
+  notification_id    Int       @id @default(autoincrement())
+  user               User      @relation(fields: [user_id], references: [user_id])
+  user_id            Int
+  content            String
+  send_date          DateTime
+  isDeleted          Boolean    @default(false)
+}
+
+model Report {
+  report_id      Int       @id @default(autoincrement())
+  user           User      @relation(fields: [user_id], references: [user_id])
+  user_id        Int
+  review         Review    @relation(fields: [review_id], references: [review_id])
+  review_id      Int
+  reason         String
+  report_date    DateTime  @default(now())
+  isDeleted          Boolean    @default(false)
+}
+model Donation {
+  id                String   @id @default(uuid())
+  preferenceId      String?  @unique
+  payerEmail        String 
+  transactionAmount Float 
+  status            String 
+  statusDetail      String? 
+  paymentMethod     String? 
+  paymentType       String? 
+  eventType         String 
+  eventDate         DateTime 
+  rawWebhookData    Json 
+  user              User?    @relation(fields: [userId], references: [user_id]) // Relación con User
+  userId            Int?     // Este campo almacena el ID del usuario asociado
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
